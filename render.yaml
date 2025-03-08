@@ -1,0 +1,11 @@
+# Exported from Render on 2025-03-08T17:53:09Z
+services:
+- type: web
+  name: Crytoprediction
+  runtime: python
+  repo: https://github.com/syedmastafa99/Crytoprediction
+  plan: free
+  region: virginia
+  buildCommand: pip install -r requirements.txt
+  startCommand: gunicorn crypto-predictor-app.py
+version: "1"
