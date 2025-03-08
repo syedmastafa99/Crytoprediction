@@ -1,0 +1,291 @@
+# templates/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.25.2/plotly.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header {
+            background-color: #343a40;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+        }
+        .card-header {
+            background-color: #f1f1f1;
+            font-weight: bold;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        .prediction-card {
+            min-height: 200px;
+        }
+        .price-info {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .price-change {
+            font-size: 1.2rem;
+        }
+        .positive {
+            color: #28a745;
+        }
+        .negative {
+            color: #dc3545;
+        }
+        .neutral {
+            color: #6c757d;
+        }
+        .recommendation {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .buy {
+            color: #28a745;
+        }
+        .sell {
+            color: #dc3545;
+        }
+        .hold {
+            color: #ffc107;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .signal-table {
+            width: 100%;
+        }
+        .signal-table td {
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .signal-label {
+            font-weight: bold;
+        }
+        #chart {
+            width: 100%;
+            height: 400px;
+        }
+        .disclaimer {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header text-center">
+        <h1>Crypto Predictor</h1>
+        <p>Analyze cryptocurrency trends and get buy/sell recommendations</p>
+    </div>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Select Cryptocurrency</div>
+                    <div class="card-body">
+                        <select id="cryptoSelect" class="form-select mb-3">
+                            {% for crypto in cryptocurrencies %}
+                            <option value="{{ crypto }}">{{ crypto|title }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <label for="daysSelect" class="form-label">Analysis Period (days):</label>
+                        <select id="daysSelect" class="form-select mb-3">
+                            <option value="30" selected>30 days</option>
+                            <option value="60">60 days</option>
+                            <option value="90">90 days</option>
+                        </select>
+
+                        <button id="analyzeBtn" class="btn btn-primary w-100">Analyze</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card prediction-card">
+                    <div class="card-header">Current Price</div>
+                    <div class="card-body text-center">
+                        <div id="priceInfo" class="price-info">-</div>
+                        <div id="priceChange" class="price-change">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Analyzing cryptocurrency data...</p>
+        </div>
+
+        <div id="results" style="display: none;">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-4">
+                        <div class="card-header">Price Chart</div>
+                        <div class="card-body">
+                            <div id="chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Recommendation</div>
+                        <div class="card-body text-center">
+                            <div id="recommendation" class="recommendation">-</div>
+                            <p id="confidenceLevel" class="mt-3">Confidence: -</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Technical Signals</div>
+                        <div class="card-body">
+                            <table class="signal-table">
+                                <tr>
+                                    <td class="signal-label">Moving Average Crossover:</td>
+                                    <td id="maCrossover">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="signal-label">Volume Trend:</td>
+                                    <td id="volumeTrend">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="signal-label">5-Day Price Trend:</td>
+                                    <td id="priceTrend5d">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="signal-label">20-Day Price Trend:</td>
+                                    <td id="priceTrend20d">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="disclaimer text-center">
+            <strong>Disclaimer:</strong> This prediction tool is for informational purposes only. Cryptocurrency investments 
+            are highly volatile and risky. Always do your own research before making investment decisions.
+            The predictions are based on historical patterns and may not accurately reflect future performance.
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const cryptoSelect = document.getElementById('cryptoSelect');
+            const daysSelect = document.getElementById('daysSelect');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+
+            analyzeBtn.addEventListener('click', analyzeCrypto);
+
+            function analyzeCrypto() {
+                const symbol = cryptoSelect.value;
+                const days = daysSelect.value;
+
+                // Show loading and hide results
+                loading.style.display = 'block';
+                results.style.display = 'none';
+
+                // Make API request
+                fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        days: days
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    results.style.display = 'block';
+                    
+                    // Update price info
+                    document.getElementById('priceInfo').textContent = data.last_price;
+                    
+                    // Update price change with color
+                    const priceChangeElement = document.getElementById('priceChange');
+                    priceChangeElement.textContent = data.price_change;
+                    
+                    if (data.price_change.startsWith('-')) {
+                        priceChangeElement.className = 'price-change negative';
+                    } else if (data.price_change === "N/A" || data.price_change === "0.00%") {
+                        priceChangeElement.className = 'price-change neutral';
+                    } else {
+                        priceChangeElement.className = 'price-change positive';
+                    }
+                    
+                    // Update recommendation
+                    const recommendationElement = document.getElementById('recommendation');
+                    if (data.recommendation === "insufficient_data") {
+                        recommendationElement.textContent = "INSUFFICIENT DATA";
+                        recommendationElement.className = 'recommendation neutral';
+                    } else {
+                        recommendationElement.textContent = data.recommendation.toUpperCase();
+                        recommendationElement.className = `recommendation ${data.recommendation}`;
+                    }
+                    
+                    // Update confidence level
+                    if (data.signals && data.signals.confidence) {
+                        document.getElementById('confidenceLevel').textContent = `Confidence: ${data.signals.confidence}`;
+                    }
+                    
+                    // Update technical signals
+                    if (data.signals) {
+                        document.getElementById('maCrossover').textContent = data.signals.ma_crossover || '-';
+                        document.getElementById('volumeTrend').textContent = data.signals.volume_trend || '-';
+                        document.getElementById('priceTrend5d').textContent = data.signals.price_trend_5d || '-';
+                        document.getElementById('priceTrend20d').textContent = data.signals.price_trend_20d || '-';
+                    }
+                    
+                    // Draw chart
+                    if (data.chart) {
+                        const chartData = JSON.parse(data.chart);
+                        Plotly.newPlot('chart', chartData.data, chartData.layout);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    loading.style.display = 'none';
+                    alert('An error occurred while analyzing the data. Please try again later.');
+                });
+            }
+            
+            // Trigger analysis of default cryptocurrency on page load
+            analyzeCrypto();
+        });
+    </script>
+</body>
+</html>
